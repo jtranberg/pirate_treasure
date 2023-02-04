@@ -1,8 +1,8 @@
 import { ThirdwebSDK } from "@thirdweb-dev/sdk";
 import dotenv from "dotenv";
 dotenv.config();
-
 import fs from "fs";
+import { ThirdwebStorage } from "@thirdweb-dev/storage";
 
 (async () => {
 
@@ -12,63 +12,73 @@ const tokenAddress = "0x9122e7F15E07f25De7c6ab75a73CF20301b8811f";
 const editionAddress = "0x32675ca8F7Fd9686e5D5fd9975b58AC9DC848133";
 
 //use private keys to instantiate thirdweb sdk
+
 const sdk = ThirdwebSDK.fromPrivateKey(process.env.PRIVATE_KEY, "goerli");
 
-//get pack contract address
-const pack = sdk.getContract(packAddress);
+const pack = await sdk.getContract(packAddress, 'pack');
 
-//set approval for the pack contract to act upon token and edition contracts
-const token = sdk.getContract(tokenAddress);
-await token.setAllowance(packAddress, 45);
-console.log("set approval for token");
+// Set approval for the pack contract to act upon token and edition contracts
+const token = await sdk.getContract(tokenAddress, 'token');
+await token.setAllowance(packAddress, 100);
 
-//set approval for the pack contract to act upon yhr edition contract
-const edition = sdk.getContract(editionAddress);
+console.log("Set approval for token");
+
+const edition = await sdk.getContract(editionAddress, 'edition');
 await edition.setApprovalForAll(packAddress, true);
-console.log("set approval for all");
 
-//read in the tresurechest as a file using fs
-const chestFile = fs.readFileSync("./treasure chest.jpeg");
+console.log("Set Approval for edition");
 
-//upload chest to ipfs
-const ipfsHash = await sdk.storage.upload(chestFile);
-const url = ipfs.uris[0];
-console.log("Upload chest asses tp ipfs");
-console.log('Creating packs now');
+// Read in the chest.png as a File using fs
+const chestFile = fs.readFileSync("./scripts/chest.jpeg");
 
-const packNFTs = await pack.create({
-    packMatadata: {
+// Upload the Chest to IPFS
+const storage = new ThirdwebStorage();
+const uri = await storage.upload(chestFile);
+
+console.log("Uploaded chest asset to IPFS");
+
+console.log("Creating packs now...");
+
+const packNfts = await pack.create({
+  packMetadata: {
     name: "Treasure Chest",
     description:
-    "A chest containing tools and treasure to help you on your voyages",
-    image: url,
-   },
-   erc20Rewards: [
-    {
-        contractAddress: tokenAddress,
-        quantityPerReward: 1,
-        quantity: 45,
-        totalRewards: 45,
-    },
-   ],
-   erc1155Rewards: [
-    {
-        //silver swords
-        contractAddress: editionAddress,
-        tokenId: 0,
-        quantityPerReward: 2,
-        totalRewards: 100,
-    },
+      "A chest containing tools and treasure to help you on your voyages.",
+    image: uri,
+  },
 
+  // Gold coin ERC-20 Tokens
+  erc20Rewards: [
     {
-        //gold swords
-        contractAddress: editionAddress,
-        tokenId: 1,
-        quantityPerReward: 1,
-        totalRewards: 5,
+      contractAddress: tokenAddress,
+      quantityPerReward: 2,
+      quantity: 45,
+      totalRewards: 20,
     },
-   ],
-   rewardsPerPack: 5,
+  ],
+
+  erc1155Rewards: [
+   
+    // Sword
+    {
+      contractAddress: editionAddress,
+      tokenId:0,
+      quantityPerReward: 5,
+      totalRewards: 20,
+    },
+    
+    // Gold sword
+    {
+      contractAddress: editionAddress,
+      tokenId: 1,
+      quantityPerReward: 1,
+      totalRewards: 5,
+    },
+  ],
+  rewardsPerPack: 1,
 });
-  console.log("Packs Created!!!");
+
+console.log(`====== Success: Pack NFTs =====`);
+
+console.log(packNfts);
 })();
